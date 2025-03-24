@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <math.h>
+#include <stdbool.h>
 
 #define SIZE 8
 
@@ -54,7 +55,44 @@ int dirt_exists(int table[SIZE][SIZE]) {
     return 0;
 }
 
-// pegar todas as sujeiras e ver qual esta mais proxima
+// fix: verifica as sujeira que podem ser limpadas
+bool cell_allowed(int cell) {
+    return (cell == SUJEIRA || cell == CAMINHO || cell == ESTACAO || cell == ROBO);
+}
+
+// fix: usa FBS (Breadth-First Search) para isso
+bool is_reachable(int table[SIZE][SIZE], int start[2], int target[2]) {
+    bool visited[SIZE][SIZE] = {false};
+    
+    typedef struct { int y, x; } Coord;
+    Coord queue[SIZE * SIZE];
+    int front = 0, back = 0;
+    
+    queue[back++] = (Coord){start[0], start[1]};
+    visited[start[0]][start[1]] = true;
+    
+    int dy[4] = {-1, 0, 1, 0};
+    int dx[4] = {0, 1, 0, -1};
+    
+    while (front < back) {
+        Coord cur = queue[front++];
+        if (cur.y == target[0] && cur.x == target[1])
+            return true;
+        
+        for (int i = 0; i < 4; i++) {
+            int ny = cur.y + dy[i], nx = cur.x + dx[i];
+            if (ny < 0 || ny >= SIZE || nx < 0 || nx >= SIZE)
+                continue;
+            if (!visited[ny][nx] && cell_allowed(table[ny][nx])) {
+                visited[ny][nx] = true;
+                queue[back++] = (Coord){ny, nx};
+            }
+        }
+    }
+    return false;
+}
+
+// pegar todas as sujeiras e ver qual esta mais proxima e que seja alcançável
 void get_closest(int table[SIZE][SIZE], int player[2], int closest[2]) {
     double minDist = -1;
     closest[0] = -1;
@@ -62,6 +100,10 @@ void get_closest(int table[SIZE][SIZE], int player[2], int closest[2]) {
     for (int y = 0; y < SIZE; y++) {
         for (int x = 0; x < SIZE; x++) {
             if (table[y][x] == SUJEIRA) {
+                int target[2] = {y, x};
+                // fix: so considera se houver caminho
+                if (!is_reachable(table, player, target))
+                    continue;
                 double d = distance(player[0], player[1], y, x);
                 if (minDist < 0 || d < minDist) {
                     minDist = d;
@@ -87,9 +129,9 @@ void move_towards(int table[SIZE][SIZE], int player[2], int target[2]) {
         if (ny < 0 || ny >= SIZE || nx < 0 || nx >= SIZE)
             continue;
 
-            if (table[ny][nx] != SUJEIRA && table[ny][nx] != CAMINHO && table[ny][nx] != ESTACAO)
+        if (!cell_allowed(table[ny][nx]))
             continue;
-        // usa distancia euclidiana para voltar 
+        // usa distancia euclidiana para voltar
         double d = distance(ny, nx, target[0], target[1]);
         if (bestDist < 0 || d < bestDist) {
             bestDist = d;
@@ -135,7 +177,6 @@ int main() {
             printf("Posição inválida!\n");
             continue;
         }
-        // fix: não pode botar no lugar da estação :)
         if (table[dirt[0]][dirt[1]] == PAREDE)
             table[dirt[0]][dirt[1]] = SUJEIRA;
         else
