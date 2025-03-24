@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #define SIZE 8
+#define BUFFER_SIZE 100
 
 #define PAREDE    0  
 #define SUJEIRA   1  
@@ -36,12 +37,34 @@ void print_table(int table[SIZE][SIZE]) {
     printf("\n");
 }
 
+bool read_int(const char* prompt, int *number) {
+    char buffer[BUFFER_SIZE];
+    char *endptr;
+    printf("%s", prompt);
+    if (fgets(buffer, BUFFER_SIZE, stdin) == NULL)
+        return false;
+    buffer[strcspn(buffer, "\n")] = '\0';
+    *number = (int)strtol(buffer, &endptr, 10);
+    if (*endptr != '\0' || buffer[0] == '\0') {
+        return false;
+    }
+    return true;
+}
+
 void ask_point(char* prompt, int point[2]) {
-    printf("%s\n", prompt);
-    printf("Linha: ");
-    scanf("%d", &point[0]);
-    printf("Coluna: ");
-    scanf("%d", &point[1]);
+    bool valid = false;
+    while (!valid) {
+        printf("%s\n", prompt);
+        if (!read_int("Linha: ", &point[0])) {
+            printf("Entrada inválida para a linha! Digite um número.\n");
+            continue;
+        }
+        if (!read_int("Coluna: ", &point[1])) {
+            printf("Entrada inválida para a coluna! Digite um número.\n");
+            continue;
+        }
+        valid = true;
+    }
 }
 
 // fix: so termina qnd não tiver
